@@ -1,8 +1,6 @@
 /* Page */
 .stocks-page {
-  min-height: 80vh;
-  background: #f6f7fb;
-  color: #111827;
+  height: 100dvh; overflow: hidden; display: flex; flex-direction: column; 
   scroll-behavior: smooth;
   overflow-y: scroll;
 }
