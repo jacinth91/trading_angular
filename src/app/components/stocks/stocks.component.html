@@ -1,163 +1,112 @@
-<div class="stocks-page">
-  <header class="topbar">
-    <div class="topbar-left">
-      <button type="button" class="btn btn-ghost" (click)="goBack()">
-        ← Back
-      </button>
-
-      <div class="brand">
-        <span class="brand-name">UAE Trading</span>
-        <span class="muted">Stocks</span>
-      </div>
-    </div>
-
-    <div class="topbar-right">
-      <div class="user">
-        
-        <span class="user-name">{{ username() }}</span>
-      </div>
-
-      <button type="button" class="btn btn-ghost" (click)="logout()">Sign out</button>
-    </div>
-  </header>
-
-  <main class="page">
-    <section class="page-head">
+<!-- DETAILS MODAL (compact) -->
+<div *ngIf="selectedStock()" class="modal-backdrop" (click)="closeModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="modal-header">
       <div>
-        <h1>Stocks</h1>
-        <p class="muted">Search and pick a symbol.</p>
+        <div class="mono strong">{{ selectedStock()!.symbol }}</div>
+        <div class="muted">{{ selectedStock()!.name }}</div>
       </div>
-    </section>
 
-    <section class="toolbar">
-      <div class="search">
-        <input
-          type="text"
-          placeholder="Search symbol, name, sector…"
-          [value]="searchQuery()"
-          (input)="onSearchChange($any($event.target).value)"
-        />
-      </div>
-    </section>
+      <button type="button" class="xbtn" (click)="closeModal()" aria-label="Close">✕</button>
+    </div>
 
-    <section *ngIf="isLoading()" class="state">
-      <div class="spinner"></div>
-      <p class="muted">Loading…</p>
-    </section>
-
-    <section *ngIf="!isLoading() && filteredStocks().length === 0" class="state">
-      <p class="state-title">No results</p>
-      <p class="muted">Try a different keyword.</p>
-    </section>
-
-    <section *ngIf="!isLoading() && filteredStocks().length > 0" class="panel">
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Symbol</th>
-              <th>Name</th>
-              <th>Sector</th>
-              <th class="right">Price</th>
-              <th class="right">Change</th>
-              <th class="right">Volume</th>
-              <th class="right"></th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr *ngFor="let stock of filteredStocks()" (click)="selectStock(stock)" class="row">
-              <td class="mono strong">{{ stock.symbol }}</td>
-              <td>{{ stock.name }}</td>
-              <td class="muted">{{ stock.sector }}</td>
-
-              <td class="right mono">AED {{ stock.current_price }}</td>
-
-              <td class="right">
-                <span
-                  class="pill"
-                  [class.pill-pos]="stock.change_percent > 0"
-                  [class.pill-neg]="stock.change_percent < 0"
-                >
-                  {{ stock.change_percent > 0 ? '+' : '' }}{{ stock.change_percent }}%
-                </span>
-              </td>
-
-              <td class="right mono">{{ (stock.volume / 1000000).toFixed(2) }}M</td>
-
-              <td class="right" (click)="$event.stopPropagation()">
-                <button type="button" class="btn btn-small" (click)="buyStock(stock, $event)">Buy</button>
-                <button type="button" class="btn btn-small btn-ghost" (click)="selectStock(stock)">Details</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-
-  <!-- DETAILS MODAL -->
-  <div *ngIf="selectedStock()" class="overlay" (click)="closeModal()">
-    <div class="modal" (click)="$event.stopPropagation()">
-      <div class="modal-head">
-        <div>
-          <h2 class="mono">{{ selectedStock()!.symbol }}</h2>
-          <p class="muted">{{ selectedStock()!.name }}</p>
+    <div class="modal-body">
+      <div class="kv">
+        <div class="kv-row">
+          <span class="muted">Price</span>
+          <span class="mono">AED {{ selectedStock()!.current_price }}</span>
         </div>
 
-        <button type="button" class="icon-btn" (click)="closeModal()" aria-label="Close">
-          ✕
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <div class="kv">
-          <div class="kv-row">
-            <span class="muted">Price</span>
-            <span class="mono">AED {{ selectedStock()!.current_price }}</span>
-          </div>
-
-          <div class="kv-row">
-            <span class="muted">Change</span>
-            <span
-              class="mono"
-              [class.positive]="selectedStock()!.change_percent > 0"
-              [class.negative]="selectedStock()!.change_percent < 0"
-            >
-              {{ selectedStock()!.change_percent > 0 ? '+' : '' }}{{ selectedStock()!.change_percent }}%
-            </span>
-          </div>
-
-          <div class="kv-row">
-            <span class="muted">Market</span>
-            <span>{{ selectedStock()!.market }}</span>
-          </div>
-
-          <div class="kv-row">
-            <span class="muted">Sector</span>
-            <span>{{ selectedStock()!.sector }}</span>
-          </div>
-
-          <div class="kv-row">
-            <span class="muted">Volume</span>
-            <span class="mono">{{ selectedStock()!.volume.toLocaleString() }}</span>
-          </div>
-
-          <div class="kv-row">
-            <span class="muted">Market cap</span>
-            <span class="mono">{{ (selectedStock()!.market_cap / 1000000000).toFixed(2) }}B AED</span>
-          </div>
+        <div class="kv-row">
+          <span class="muted">Change</span>
+          <span class="mono"
+                [class.pos]="selectedStock()!.change_percent > 0"
+                [class.neg]="selectedStock()!.change_percent < 0">
+            {{ selectedStock()!.change_percent > 0 ? '+' : '' }}{{ selectedStock()!.change_percent }}%
+          </span>
         </div>
 
-        <div class="modal-actions">
-          <button type="button" class="btn btn-primary" (click)="buyStock(selectedStock()!, $event)">
-            Buy
-          </button>
-          <button type="button" class="btn" disabled>
-            Sell
-          </button>
+        <div class="kv-row">
+          <span class="muted">Market</span>
+          <span>{{ selectedStock()!.market }}</span>
+        </div>
+
+        <div class="kv-row">
+          <span class="muted">Sector</span>
+          <span>{{ selectedStock()!.sector }}</span>
+        </div>
+
+        <div class="kv-row">
+          <span class="muted">Volume</span>
+          <span class="mono">{{ selectedStock()!.volume.toLocaleString() }}</span>
+        </div>
+
+        <div class="kv-row">
+          <span class="muted">Market cap</span>
+          <span class="mono">{{ (selectedStock()!.market_cap / 1000000000).toFixed(2) }}B AED</span>
         </div>
       </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn primary" (click)="buyStock(selectedStock()!, $event)">Buy</button>
+      <button type="button" class="btn" (click)="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+<!-- DETAILS MODAL (compact) -->
+<div *ngIf="selectedStock()" class="modal-backdrop" (click)="closeModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <div>
+        <div class="mono strong">{{ selectedStock()!.symbol }}</div>
+        <div class="muted">{{ selectedStock()!.name }}</div>
+      </div>
+
+      <button type="button" class="xbtn" (click)="closeModal()" aria-label="Close">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="kv">
+        <div class="kv-row">
+          <span class="muted">Price</span>
+          <span class="mono">AED {{ selectedStock()!.current_price }}</span>
+        </div>
+
+        <div class="kv-row">
+          <span class="muted">Change</span>
+          <span class="mono"
+                [class.pos]="selectedStock()!.change_percent > 0"
+                [class.neg]="selectedStock()!.change_percent < 0">
+            {{ selectedStock()!.change_percent > 0 ? '+' : '' }}{{ selectedStock()!.change_percent }}%
+          </span>
+        </div>
+
+        <div class="kv-row">
+          <span class="muted">Market</span>
+          <span>{{ selectedStock()!.market }}</span>
+        </div>
+
+        <div class="kv-row">
+          <span class="muted">Sector</span>
+          <span>{{ selectedStock()!.sector }}</span>
+        </div>
+
+        <div class="kv-row">
+          <span class="muted">Volume</span>
+          <span class="mono">{{ selectedStock()!.volume.toLocaleString() }}</span>
+        </div>
+
+        <div class="kv-row">
+          <span class="muted">Market cap</span>
+          <span class="mono">{{ (selectedStock()!.market_cap / 1000000000).toFixed(2) }}B AED</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn primary" (click)="buyStock(selectedStock()!, $event)">Buy</button>
+      <button type="button" class="btn" (click)="closeModal()">Close</button>
     </div>
   </div>
 </div>
