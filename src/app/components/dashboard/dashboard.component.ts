@@ -1,4 +1,7 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
+import { AgGridAngular } from 'ag-grid-angular';
+import { io, Socket } from 'socket.io-client';
+import { ColDef, GridApi, GridOptions, GridReadyEvent, ValueFormatterParams } from 'ag-grid-community';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -8,11 +11,14 @@ import { Trade, MarketData, PortfolioItem } from '../../models/trading.types';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule,AgGridAngular],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
+  private socket!: Socket;
+  private gridApi!: GridApi;
+  getRowId = (params: any) => params.data.symbol;
   username: string = '';
   recentTrades: Trade[] = [];
   marketData: MarketData[] = [];
@@ -108,48 +114,48 @@ export class DashboardComponent implements OnInit {
       }
     ];
 
-    this.marketData = [
-      {
-        symbol: 'DFM',
-        name: 'Dubai Financial Market',
-        price: 12.45,
-        change: 0.35,
-        changePercent: 2.89,
-        volume: '2.5M'
-      },
-      {
-        symbol: 'EMAAR',
-        name: 'Emaar Properties',
-        price: 45.60,
-        change: -0.80,
-        changePercent: -1.72,
-        volume: '1.8M'
-      },
-      {
-        symbol: 'ADNOC',
-        name: 'ADNOC Distribution',
-        price: 33.20,
-        change: 1.15,
-        changePercent: 3.59,
-        volume: '3.2M'
-      },
-      {
-        symbol: 'TAQA',
-        name: 'Abu Dhabi National Energy',
-        price: 8.75,
-        change: 0.12,
-        changePercent: 1.39,
-        volume: '5.1M'
-      },
-      {
-        symbol: 'ADX',
-        name: 'Abu Dhabi Securities Exchange',
-        price: 28.90,
-        change: -0.45,
-        changePercent: -1.53,
-        volume: '1.2M'
-      }
-    ];
+    // this.marketData = [
+    //   {
+    //     symbol: 'DFM',
+    //     name: 'Dubai Financial Market',
+    //     price: 12.45,
+    //     change: 0.35,
+    //     changePercent: 2.89,
+    //     volume: '2.5M'
+    //   },
+    //   {
+    //     symbol: 'EMAAR',
+    //     name: 'Emaar Properties',
+    //     price: 45.60,
+    //     change: -0.80,
+    //     changePercent: -1.72,
+    //     volume: '1.8M'
+    //   },
+    //   {
+    //     symbol: 'ADNOC',
+    //     name: 'ADNOC Distribution',
+    //     price: 33.20,
+    //     change: 1.15,
+    //     changePercent: 3.59,
+    //     volume: '3.2M'
+    //   },
+    //   {
+    //     symbol: 'TAQA',
+    //     name: 'Abu Dhabi National Energy',
+    //     price: 8.75,
+    //     change: 0.12,
+    //     changePercent: 1.39,
+    //     volume: '5.1M'
+    //   },
+    //   {
+    //     symbol: 'ADX',
+    //     name: 'Abu Dhabi Securities Exchange',
+    //     price: 28.90,
+    //     change: -0.45,
+    //     changePercent: -1.53,
+    //     volume: '1.2M'
+    //   }
+    // ];
 
     this.portfolio = [
       {
@@ -233,13 +239,144 @@ export class DashboardComponent implements OnInit {
     this.authService.logout();
     this.router.navigate(['/login']);
   }
-
-  formatCurrency(value: number): string {
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency: 'AED'
-    }).format(value);
+  defaultColDef: ColDef = {
+    sortable: true,
+    filter: true,
+    resizable: true,
+    flex: 1,
+    minWidth: 120,
+    cellClass: 'cell-center',
+    headerClass: 'header-center',
+  };
+  onGridReady(e: GridReadyEvent) {
+    this.gridApi = e.api;
+    this.connectSocket();
   }
+  private connectSocket() {
+    this.socket = io('http://localhost:3000', {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 3000,
+    });
+
+    
+    this.socket.on('market:snapshot', (rows: any[]) => {
+      this.marketData = rows;
+      
+    });
+
+    
+    this.socket.on('market:update', (u: { symbol: string; price: number; changePercent: number }) => {
+      this.gridApi.applyTransaction({
+        update: [{ symbol: u.symbol, price: u.price, changePercent: u.changePercent }],
+      });
+    });
+
+    this.socket.on('connect_error', (err) => {
+      console.error('Socket connect error:', err?.message || err);
+    });
+  }
+
+  gridOptions: GridOptions = {
+    rowHeight: 44,
+    headerHeight: 44,
+    animateRows: true,
+    domLayout: 'normal', 
+    
+  };
+
+  private currencyFormatter = (p: ValueFormatterParams) =>
+    this.formatCurrency(Number(p.value ?? 0));
+
+  marketColDefs: ColDef[] = [
+    { headerName: 'Symbol', field: 'symbol', minWidth: 110 },
+    { headerName: 'Name', field: 'name', minWidth: 180 },
+    {
+      headerName: 'Price',
+      field: 'price',
+      valueFormatter: this.currencyFormatter,
+      
+      minWidth: 130,
+    },
+    {
+      headerName: 'Change',
+      field: 'changePercent',
+      valueFormatter: (p) => `${Number(p.value ?? 0) > 0 ? '+' : ''}${Number(p.value ?? 0).toFixed(2)}%`,
+      cellClassRules: {
+        'cell-pos': (p) => Number(p.value ?? 0) > 0,
+        'cell-neg': (p) => Number(p.value ?? 0) < 0,
+      },
+      minWidth: 130,
+    },
+    {
+      headerName: 'Volume',
+      field: 'volume',
+      
+      minWidth: 130,
+    },
+  ];
+
+  tradesColDefs: ColDef[] = [
+    { headerName: 'ID', field: 'id', minWidth: 110 },
+    { headerName: 'Symbol', field: 'symbol', minWidth: 120 },
+    {
+      headerName: 'Side',
+      field: 'type',
+      valueFormatter: (p) => (p.value === 'BUY' ? 'Buy' : 'Sell'),
+      cellClassRules: {
+        'tag-buy': (p) => p.value === 'BUY',
+        'tag-sell': (p) => p.value === 'SELL',
+      },
+      minWidth: 120,
+    },
+    { headerName: 'Qty', field: 'quantity', minWidth: 110 },
+    {
+      headerName: 'Total',
+      field: 'total',
+      valueFormatter: this.currencyFormatter,
+      
+      minWidth: 140,
+    },
+    {
+      headerName: 'Status',
+      field: 'status',
+      valueFormatter: (p) => (p.value === 'COMPLETED' ? 'Completed' : 'Pending'),
+      cellClassRules: {
+        'status-ok': (p) => p.value === 'COMPLETED',
+        'status-warn': (p) => p.value === 'PENDING',
+      },
+      minWidth: 140,
+    },
+  ];
+
+  portfolioColDefs: ColDef[] = [
+    { headerName: 'Symbol', field: 'symbol', minWidth: 120 },
+    { headerName: 'Name', field: 'name', minWidth: 200 },
+    { headerName: 'Qty', field: 'quantity', minWidth: 110 },
+    { headerName: 'Avg', field: 'avgPrice', valueFormatter: this.currencyFormatter, minWidth: 120 },
+    { headerName: 'Current', field: 'currentPrice', valueFormatter: this.currencyFormatter, minWidth: 130 },
+    { headerName: 'Value', field: 'totalValue', valueFormatter: this.currencyFormatter, minWidth: 140 },
+    {
+      headerName: 'P&L',
+      field: 'profitLoss',
+      valueFormatter: this.currencyFormatter,
+      cellClassRules: {
+        'cell-pos': (p) => Number(p.value ?? 0) > 0,
+        'cell-neg': (p) => Number(p.value ?? 0) < 0,
+      },
+      
+      minWidth: 140,
+    },
+  ];
+
+  // your existing
+  formatCurrency(value: number) {
+    return new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED' }).format(value);
+  }
+
+  
 
   formatDate(date: Date): string {
     return new Intl.DateTimeFormat('en-AE', {
@@ -248,5 +385,9 @@ export class DashboardComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
+  }
+
+  ngOnDestroy() {
+    this.socket?.disconnect();
   }
 }
