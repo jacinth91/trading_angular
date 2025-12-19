@@ -253,7 +253,7 @@ export class DashboardComponent implements OnInit {
     this.connectSocket();
   }
   private connectSocket() {
-    this.socket = io('node_stream_ws.railway.internal', {
+    this.socket = io('https://nodestreamws-production.up.railway.app', {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -268,7 +268,7 @@ export class DashboardComponent implements OnInit {
     });
 
     
-    this.socket.on('market:update', (u: { symbol: string; name:string, price: number; changePercent: number ,volume:string }) => {
+    this.socket.on('market:update', (u: { symbol: string; name:string, price: number; changePercent: number ,volume :string }) => {
       this.gridApi.applyTransaction({
         update: [{
           symbol: u.symbol,
