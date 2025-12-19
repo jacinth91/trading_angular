@@ -298,7 +298,6 @@ export class DashboardComponent implements OnInit {
 
   marketColDefs: ColDef[] = [
     { headerName: 'Symbol', field: 'symbol', minWidth: 110 },
-    { headerName: 'Name', field: 'name', minWidth: 180 },
     {
       headerName: 'Price',
       field: 'price',
@@ -316,6 +315,9 @@ export class DashboardComponent implements OnInit {
       },
       minWidth: 130,
     },
+    { headerName: 'Name', field: 'name', minWidth: 180 },
+    
+    
     {
       headerName: 'Volume',
       field: 'volume',
