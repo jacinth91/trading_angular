@@ -253,7 +253,7 @@ export class DashboardComponent implements OnInit {
     this.connectSocket();
   }
   private connectSocket() {
-    this.socket = io('http://localhost:3000', {
+    this.socket = io('node_stream_ws.railway.internal', {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -268,9 +268,15 @@ export class DashboardComponent implements OnInit {
     });
 
     
-    this.socket.on('market:update', (u: { symbol: string; price: number; changePercent: number }) => {
+    this.socket.on('market:update', (u: { symbol: string; name:string, price: number; changePercent: number ,volume:string }) => {
       this.gridApi.applyTransaction({
-        update: [{ symbol: u.symbol, price: u.price, changePercent: u.changePercent }],
+        update: [{
+          symbol: u.symbol,
+          name: u.name,
+          price: u.price,
+          changePercent: u.changePercent,
+          volume: u.volume
+        }]
       });
     });
 
@@ -390,4 +396,5 @@ export class DashboardComponent implements OnInit {
   ngOnDestroy() {
     this.socket?.disconnect();
   }
+  
 }
