@@ -5,10 +5,9 @@ import { DashboardComponent } from './components/dashboard/dashboard.component';
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
-  { path: 'dashboard', component: DashboardComponent },
   {
-    path: 'stocks',
-    loadComponent: () => import('./components/stocks/stocks.component').then(m => m.StocksComponent)
+    path: 'dashboard',
+    loadComponent: () => import('./components/dashboard/dashboard.component').then(m => m.DashboardComponent)
   },
   { path: '**', redirectTo: '/login' }
 ];

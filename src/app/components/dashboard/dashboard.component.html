@@ -95,7 +95,7 @@
     </section>
   </main>
 
- <!-- STOCKS MODAL -->
+ 
 <div *ngIf="showStocksModal()" class="m-backdrop" (click)="closeStocksModal()">
   <div class="m-card" (click)="$event.stopPropagation()">
     <div class="m-top">
@@ -148,7 +148,7 @@
     </div>
   </div>
 </div>
-<!-- STOCK DETAIL MODAL -->
+
 <div *ngIf="selectedStock()" class="m-backdrop" (click)="closeStockDetail()">
   <div class="m-card m-card-sm" (click)="$event.stopPropagation()">
     <div class="m-top">
